@@ -34,7 +34,8 @@ const enum EffectType {
 export class GameManager extends Component {
   spriteRecord: Record<number, SpriteFrame> = {}
 
-  levels: string[] = []
+  // levels: string[] = []
+  levels = ["####\r\n#.@.##\r\n#.&.^#\r\n######"," ####\r\n#.@.#\r\n#^#&.#\r\n#....#\r\n#..##\r\n ##","########\r\n#...#...#\r\n#.&@^.&.#\r\n#..^####\r\n ###","#######\r\n#.@#@^#\r\n#.&#.&#\r\n#.^#..#\r\n#######","########\r\n#..^...#\r\n#^@#@&.#\r\n#&.....#\r\n#..#####\r\n ##","  ###\r\n #@..#\r\n  #..#\r\n  #&.#\r\n ##@##\r\n#^&^@#\r\n ####"," ####\r\n#....#\r\n#@##.#\r\n #@.&.#\r\n #..^#\r\n  ###","   ###\r\n  #^^^#\r\n ##&&&##\r\n#^&@@@&^#\r\n#^&@#@&^#\r\n#^&@@@&^#\r\n ##&&&##\r\n  #^^^#\r\n   ###","#####\r\n#...#\r\n#^..#\r\n#@..#\r\n#.###\r\n#&&.#\r\n#^..#\r\n#@..#\r\n#####","#######\r\n#^@^@##\r\n###.&.#\r\n###&..#\r\n###...#\r\n#######"," #######\r\n#@@@@...#\r\n#....&&.#\r\n#..^^..#\r\n#&&&&##\r\n#^^^^#\r\n ####"," #####\r\n#@^&^@#\r\n #...#\r\n #&@&#\r\n #...#\r\n#@^&^@#\r\n #####"]
   currentLevel: number = 1
   lastLevel = 12
   levelSuccess = false
@@ -71,12 +72,12 @@ export class GameManager extends Component {
     loadSprite('wall/spriteFrame', GridType.Wall)
     loadSprite('chest/spriteFrame', GridType.Chest)
     loadSprite('pit/spriteFrame', GridType.Pit)
-      ;[...Array(13).keys()].slice(1).forEach((i) => {
-        resources.load('level' + i, TextAsset, (err, data) => {
-          assert(err)
-          this.levels[i] = data.text
-        })
-      })
+    // ;[...Array(13).keys()].slice(1).forEach((i) => {
+    //   resources.load('level' + i, TextAsset, (err, data) => {
+    //     assert(err)
+    //     this.levels[i] = data.text
+    //   })
+    // })
   }
 
   step() {
@@ -213,7 +214,7 @@ export class GameManager extends Component {
     ground.removeAllChildren()
     const leveltext = this.levels[this.currentLevel]
     if (!leveltext) throw `level ${this.currentLevel} not exisit`
-    const map = leveltext.split('\n').reverse().map(v => v.trimEnd())
+    const map = leveltext.split(/\r?\n/).reverse().map(v => v.trimEnd())
     const height = map.length
     const width = Math.max(...map.map(line => line.length))
     this.zoomRate = Math.min(100 / height, 108 / width) / 16
