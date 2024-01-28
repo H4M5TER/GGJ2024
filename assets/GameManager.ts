@@ -108,6 +108,7 @@ export class GameManager extends Component {
   }
 
   resolveQueue() {
+    if (!this.moveQueue.length) return
     this.lockInput = true
     this.inputLabel.string = ''
     this.schedule(this.step, 0.3) 
@@ -117,6 +118,8 @@ export class GameManager extends Component {
     if (this.gameStarted) return
     this.gameStarted = true
     director.emit('danmaku-start')
+    const audio = this.node.getChildByPath('Audio/Music').getComponent(AudioSource)
+    audio.play()
     this.node.getChildByPath('StartMenu').active = false
     this.loadMap()
     const enterQueue = (x, y) => {
@@ -321,7 +324,7 @@ export class GameManager extends Component {
         player.x += mov_x
         player.y += mov_y
       } else {
-        this.playSound('Collision')
+        // this.playSound('Collision')
       }
     })
   }

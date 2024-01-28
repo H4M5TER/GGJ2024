@@ -29,6 +29,15 @@ export class Player extends Component {
     private printText: string;
 
     start() {
+        director.on('success', ()=>{
+            this.state = 'success'
+            this.randomTimer = 1000
+        })
+        director.on('failure', ()=>{
+            this.state = 'failed'
+            this.randomTimer = 1000
+        })
+
         this.gameManager = this.node.getParent().getComponent(GameManager);
         this.playerDialog = this.node.getChildByName("dialog");
         this.playerDialogText = this.node.getChildByName("dialog").getChildByName("Label").getComponent(Label);
@@ -58,8 +67,8 @@ export class Player extends Component {
     }
 
     update(deltaTime: number) {
-        this.startTimer += this.gameManager.gameStarted ? deltaTime * 15 : 0;
-        this.wordTimer += this.gameManager.gameStarted ? deltaTime * 15 : 0;
+        this.startTimer += this.gameManager.gameStarted ? deltaTime * 20 : 0;
+        this.wordTimer += this.gameManager.gameStarted ? deltaTime * 20 : 0;
 
         // Visible
         this.playerDialog.setScale(lerp(this.playerDialog.scale.x, this.isSpeaking ? 1 : 0, deltaTime * 10),
@@ -69,7 +78,7 @@ export class Player extends Component {
         this.node.setScale(this.isSpeaking ? Math.sin(this.startTimer) / 200 + 1 : 1, this.node.scale.y, 0);
 
         if (this.introIndex < 2) {
-            if (this.startTimer > (this.introTexts[this.introIndex].length * 2 + 15)) {
+            if (this.startTimer > (this.introTexts[this.introIndex].length * 2 + 20)) {
                 this.introIndex++;
                 this.startTimer = 0;
                 this.wordNumber = 0;
@@ -93,11 +102,11 @@ export class Player extends Component {
                     this.printText = this.puzzleSolvingTexts[math.randomRangeInt(0, 8)];
                 }
                 if (this.state == "success") {
-                    this.printText = this.puzzleSolvingTexts[math.randomRangeInt(0, 4)];
+                    this.printText = this.playerSuccessTexts[math.randomRangeInt(0, 4)];
                     this.state = "solving";
                 }
                 if (this.state == "failed") {
-                    this.printText = this.puzzleSolvingTexts[math.randomRangeInt(0, 3)];
+                    this.printText = this.playerFailedTexts[math.randomRangeInt(0, 3)];
                     this.state = "solving";
                 }
                 this.isSpeaking = true;
