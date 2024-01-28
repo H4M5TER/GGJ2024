@@ -1,4 +1,4 @@
-import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, PostProcessStage, floatToHalf, UITransform, director, Label } from 'cc';
+import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, UITransform, director, Label, AudioSource } from 'cc';
 const { ccclass, property } = _decorator;
 
 const enum GridType {
@@ -43,7 +43,7 @@ export class GameManager extends Component {
   players: Position[] = []
   mapChanges: Map<Grid, EffectType> = new Map()
   moveQueue: Position[] = []
-  inputBox: Node
+  inputLabel: Label
 
   gameStarted = false
   gameEnd = false
@@ -87,6 +87,18 @@ export class GameManager extends Component {
     this.handleMove(x, y)
   }
 
+  playSound(name: string) {
+    const audio = this.node.getChildByPath('Audio/' + name).getComponent(AudioSource)
+    if (audio.playing) return
+    audio.playOneShot(audio.clip)
+  }
+
+  resolveQueue() {
+    this.lockInput = true
+    this.inputLabel.string = ''
+    this.schedule(this.step, 0.3) 
+  }
+
   onGameStart() {
     if (this.gameStarted) return
     this.gameStarted = true
@@ -96,7 +108,7 @@ export class GameManager extends Component {
       if (this.lockInput) return
       this.moveQueue.push({ x: x, y: y })
     }
-    const label = this.node.getChildByName('Input').getComponent(Label)
+    const label = this.inputLabel = this.node.getChildByName('Input').getComponent(Label)
     input.on(Input.EventType.KEY_DOWN, (e) => {
       switch (e.keyCode) {
         case KeyCode.ARROW_UP:
@@ -124,9 +136,8 @@ export class GameManager extends Component {
           break
         case KeyCode.ENTER:
         case KeyCode.SPACE:
-          this.lockInput = true
-          label.string = ''
-          this.schedule(this.step, 0.2)
+          // this.playSound('Printer')
+          this.resolveQueue()
           break
         case KeyCode.BACKSPACE:
           label.string = label.string.slice(0, -1)
@@ -149,9 +160,9 @@ export class GameManager extends Component {
       if (effect === EffectType.PitGone) return GridType.Ground
     }
     for (let [grid, effect] of this.mapChanges) {
-      log(`${grid.x}, ${grid.y}: ${effect}`)
       if (effect === EffectType.PitGone) {
         this.pitRemains -= 1
+        this.playSound('DropStuff')
       }
       grid.type = effect2grid(effect)
       refreshGrid(grid)
@@ -184,9 +195,9 @@ export class GameManager extends Component {
     ground.removeAllChildren()
     const leveltext = this.levels[this.currentLevel]
     if (!leveltext) throw `level ${this.currentLevel} not exisit`
-    const map = leveltext.split('\n').reverse().map(v=>v.trimEnd())
+    const map = leveltext.split('\n').reverse().map(v => v.trimEnd())
     const height = map.length
-    const width = Math.max(...map.map(line=>line.length))
+    const width = Math.max(...map.map(line => line.length))
     this.zoomRate = Math.min(100 / height, 108 / width) / 16
     level.setScale(this.zoomRate, this.zoomRate, 0)
     ground.setScale(this.zoomRate, this.zoomRate, 0)
@@ -289,10 +300,13 @@ export class GameManager extends Component {
       const target = this.map[player.y + mov_y][player.x + mov_x]
       if (!target) return
       if (tryMove(target)) {
+        this.playSound('FootStep')
         setGrid(current, EffectType.PlayerMoveFrom)
         setGrid(target, EffectType.PlayerMoveTo)
         player.x += mov_x
         player.y += mov_y
+      } else {
+        this.playSound('Collision')
       }
     })
   }
