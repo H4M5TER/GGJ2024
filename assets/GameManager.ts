@@ -1,0 +1,242 @@
+import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode } from 'cc';
+const { ccclass, property } = _decorator;
+
+const enum GridType {
+  Empty,
+  Ground,
+  Player,
+  Wall,
+  Chest,
+  Pit,
+}
+
+interface Grid {
+  type: GridType,
+  node: Node,
+  x: number,
+  y: number
+}
+
+interface Player {
+  x: number
+  y: number
+}
+
+@ccclass('GameManager')
+export class GameManager extends Component {
+  map: Grid[][] = []
+  mapChanges: { grid: Grid, type: GridType }[] = []
+  reverseChange: boolean = false
+  spriteRecord: Record<number, SpriteFrame> = {}
+  levels: string[] = []
+  players: Player[] = []
+  pitRemains: number = -1
+  currentLevel: number
+
+  start() {
+    function assert(err) {
+      if (err) {
+        log(err)
+        throw err
+      }
+    }
+    const loadSprite = (path: string, type: GridType) => {
+      resources.load(path, SpriteFrame, (err, data) => {
+        assert(err)
+        this.spriteRecord[type] = data
+      })
+    }
+    loadSprite('sokobanPlayer1/spriteFrame', GridType.Player)
+    loadSprite('ground/spriteFrame', GridType.Ground)
+    loadSprite('wall/spriteFrame', GridType.Wall)
+    loadSprite('chest/spriteFrame', GridType.Chest)
+    loadSprite('pit/spriteFrame', GridType.Pit)
+      ;[...Array(13).keys()].slice(1).forEach((i) => {
+        resources.load('level' + i, TextAsset, (err, data) => {
+          assert(err)
+          this.levels[i] = data.text
+        })
+      })
+  }
+
+  onGameStart() {
+    this.node.getChildByName('StartMenu').active = false
+    this.currentLevel = 1
+    this.loadMap()
+    input.on(Input.EventType.KEY_DOWN, (e) => {
+      switch (e.keyCode) {
+        case KeyCode.ARROW_UP:
+        case KeyCode.KEY_W:
+          this.handleMove(0, 1)
+          break
+        case KeyCode.ARROW_DOWN:
+        case KeyCode.KEY_S:
+          this.handleMove(0, -1)
+          break
+        case KeyCode.ARROW_LEFT:
+        case KeyCode.KEY_A:
+          this.handleMove(-1, 0)
+          break
+        case KeyCode.ARROW_RIGHT:
+        case KeyCode.KEY_D:
+          this.handleMove(1, 0)
+          break
+        case KeyCode.KEY_R:
+          this.loadMap()
+          break
+      }
+    })
+  }
+
+  update(deltaTime: number) {
+    const refreshGrid = (grid: Grid) => {
+      grid.node.getComponent(Sprite).spriteFrame = this.spriteRecord[grid.type]
+    }
+    let v
+    if (this.reverseChange) {
+      this.mapChanges = this.mapChanges.reverse()
+    }
+    if (this.mapChanges.length) {
+      log(this.mapChanges.map((v)=>`${v.grid.type} to ${v.type} at ${v.grid.x}, ${v.grid.y}`).join('\n'))
+    }
+    while (this.mapChanges.length) {
+      v = this.mapChanges.pop()
+      if (v.grid.type === GridType.Pit) {
+        this.pitRemains -= 1
+      }
+      v.grid.type = v.type
+      refreshGrid(v.grid)
+    }
+    if (!this.pitRemains) {
+      this.currentLevel += 1
+      return this.loadMap()
+    }
+  }
+
+  symbol2type(symbol: string) {
+    if (symbol == '.') return GridType.Ground
+    if (symbol == '@') return GridType.Player
+    if (symbol == '#') return GridType.Wall
+    if (symbol == '&') return GridType.Chest
+    if (symbol == '^') return GridType.Pit
+    return GridType.Empty
+  }
+
+  createNodeWithSpriteFrame(spriteFrame: SpriteFrame) {
+    const node = new Node()
+    const sprite = node.addComponent(Sprite)
+    sprite.spriteFrame = spriteFrame
+    return node
+  }
+
+  loadMap() {
+    const level = this.node.getChildByName('Level')
+    const ground = this.node.getChildByName('Ground')
+    level.removeAllChildren()
+    ground.removeAllChildren()
+    const leveltext = this.levels[this.currentLevel]
+    if (!leveltext) throw `level ${this.currentLevel} not exisit`
+    const map = leveltext.split('\n').reverse()
+    // const height = map.length
+    // const width = Math.max(...map.map(line=>line.length))
+    // this.map = Array(width).map(()=>Array(height))
+    this.pitRemains = 0
+    this.players = []
+    this.map = []
+    for (let y = 0; y < map.length; ++y) {
+      this.map[y] = []
+      for (let x = 0; x < map[y].length; ++x) {
+        const type = this.symbol2type(map[y][x])
+        if (type === GridType.Empty) continue
+        if (type === GridType.Player) {
+          this.players.push({ x: x, y: y })
+        }
+        if (type === GridType.Pit) {
+          this.pitRemains += 1
+        }
+        const groundGrid = this.createNodeWithSpriteFrame(this.spriteRecord[GridType.Ground])
+        ground.addChild(groundGrid)
+        this.setPosition(groundGrid, x, y)
+        const grid = this.createNodeWithSpriteFrame(this.spriteRecord[type])
+        level.addChild(grid)
+        this.setPosition(grid, x, y)
+        this.map[y][x] = {
+          type: type,
+          node: grid,
+          x: x,
+          y: y,
+        }
+      }
+    }
+  }
+
+  setPosition(node: Node, x, y) {
+    node.setPosition(x * 16, y * 16, 0)
+  }
+
+  handleMove(mov_x: number, mov_y: number) {
+    if (mov_x) {
+      if (mov_x === 1) this.reverseChange = false
+      else this.reverseChange = true
+    }
+    if (mov_y) {
+      if (mov_y === 1) this.reverseChange = true
+      else this.reverseChange = false
+    }
+    // this.reverseChange = (mov_x || mov_y) === 1
+    // log(`${mov_x}, ${mov_y}`)
+    // log(mov_x || mov_y)
+    // log((mov_x || mov_y) === 1)
+    const setGrid = (grid: Grid, type: GridType) => {
+      this.mapChanges.push({ grid: grid, type: type })
+    }
+    const tryMove = (target: Grid): boolean => {
+      if (!target) return false
+      let further
+      if (this.map[target.y + mov_y])
+        further = this.map[target.y + mov_y][target.x + mov_x]
+      else
+        further = undefined
+      switch (target.type) {
+        case GridType.Wall:
+        case GridType.Pit:
+          return false
+        case GridType.Player:
+          return tryMove(further)
+        case GridType.Chest:
+          if (further.type === GridType.Wall)
+            return false
+          if (further.type === GridType.Ground) {
+            setGrid(further, GridType.Chest)
+            return true
+          }
+          if (further.type === GridType.Pit) {
+            setGrid(further, GridType.Ground)
+            return true
+          }
+          if (further.type === GridType.Player) {
+            return tryMove(further)
+          }
+          if (further.type === GridType.Chest)
+            return false
+        case GridType.Ground:
+          return true
+        default:
+          return false
+      }
+    }
+    this.players.forEach((player) => {
+      const current = this.map[player.y][player.x]
+      const target = this.map[player.y + mov_y][player.x + mov_x]
+      if (!target) return
+      if (tryMove(target)) {
+        setGrid(current, GridType.Ground)
+        setGrid(target, GridType.Player)
+        player.x += mov_x
+        player.y += mov_y
+      }
+    })
+  }
+}
+
+
