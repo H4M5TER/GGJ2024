@@ -1,4 +1,4 @@
-import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode } from 'cc';
+import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, PostProcessStage, floatToHalf } from 'cc';
 const { ccclass, property } = _decorator;
 
 const enum GridType {
@@ -39,6 +39,9 @@ export class GameManager extends Component {
   players: Position[] = []
   pitRemains: number = -1
   currentLevel: number = 1
+  moveQueue: Position[] = []
+  gameStarted = false
+  lockInput = false
 
   start() {
     function assert(err) {
@@ -66,29 +69,49 @@ export class GameManager extends Component {
       })
   }
 
+  step() {
+    if (!this.moveQueue.length) {
+      this.lockInput = false
+      this.unschedule(step)
+      return
+    }
+    const { x, y } = this.moveQueue.shift()
+    this.handleMove(x, y)
+  }
+
   onGameStart() {
-    this.node.getChildByName('StartMenu').active = false
+    if (this.gameStarted) return
+    this.gameStarted = true
+    this.node.getChildByPath('StartMenu').active = false
     this.loadMap()
+    const enterQueue = (x, y) => {
+      this.moveQueue.push({ x: x, y: y })
+    }
     input.on(Input.EventType.KEY_DOWN, (e) => {
       switch (e.keyCode) {
         case KeyCode.ARROW_UP:
         case KeyCode.KEY_W:
-          this.handleMove(0, 1)
+          enterQueue(0, 1)
           break
         case KeyCode.ARROW_DOWN:
         case KeyCode.KEY_S:
-          this.handleMove(0, -1)
+          enterQueue(0, -1)
           break
         case KeyCode.ARROW_LEFT:
         case KeyCode.KEY_A:
-          this.handleMove(-1, 0)
+          enterQueue(-1, 0)
           break
         case KeyCode.ARROW_RIGHT:
         case KeyCode.KEY_D:
-          this.handleMove(1, 0)
+          enterQueue(1, 0)
           break
         case KeyCode.KEY_R:
           this.loadMap()
+          break
+        case KeyCode.ENTER:
+        case KeyCode.SPACE:
+          this.lockInput = true
+          this.schedule(this.step, 0.2)
           break
       }
     })
@@ -99,12 +122,6 @@ export class GameManager extends Component {
       grid.node.getComponent(Sprite).spriteFrame = this.spriteRecord[grid.type]
     }
     let v
-    // if (this.reverseChange) {
-    //   this.mapChanges = this.mapChanges.reverse()
-    // }
-    // if (this.mapChanges.length) {
-    //   log(this.mapChanges.map((v) => `${v.grid.type} to ${v.type} at ${v.grid.x}, ${v.grid.y}`).join('\n'))
-    // }
     function effect2grid(effect: EffectType) {
       if (effect === EffectType.PlayerMoveFrom) return GridType.Ground
       if (effect === EffectType.ChestMoveFrom) return GridType.Ground
@@ -135,8 +152,8 @@ export class GameManager extends Component {
   }
 
   loadMap() {
-    const level = this.node.getChildByName('Level')
-    const ground = this.node.getChildByName('Ground')
+    const level = this.node.getChildByPath('window/Level')
+    const ground = this.node.getChildByPath('window/Ground')
     level.removeAllChildren()
     ground.removeAllChildren()
     const leveltext = this.levels[this.currentLevel]
@@ -148,6 +165,9 @@ export class GameManager extends Component {
     this.pitRemains = 0
     this.players = []
     this.map = []
+    this.lockInput = false
+    this.moveQueue = []
+    this.unschedule(this.step)
     function symbol2type(symbol: string) {
       if (symbol == '.') return GridType.Ground
       if (symbol == '@') return GridType.Player
@@ -188,24 +208,10 @@ export class GameManager extends Component {
   }
 
   handleMove(mov_x: number, mov_y: number) {
-    if (mov_x) {
-      if (mov_x === 1) this.reverseChange = false
-      else this.reverseChange = true
-    }
-    if (mov_y) {
-      if (mov_y === 1) this.reverseChange = true
-      else this.reverseChange = false
-    }
-    // this.reverseChange = (mov_x || mov_y) === 1
-    // log(`${mov_x}, ${mov_y}`)
-    // log(mov_x || mov_y)
-    // log((mov_x || mov_y) === 1)
     const setGrid = (grid: Grid, effect: EffectType) => {
       if (this.mapChanges.has(grid)) {
-        log(`${grid.x}, ${grid.y}: ${this.mapChanges.get(grid)} + ${effect}`)
         if (this.mapChanges.get(grid) < effect) {
           this.mapChanges.set(grid, effect)
-        } else {
         }
       } else {
         this.mapChanges.set(grid, effect)
