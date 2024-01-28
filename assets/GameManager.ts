@@ -1,4 +1,4 @@
-import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, PostProcessStage, floatToHalf } from 'cc';
+import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, PostProcessStage, floatToHalf, UITransform } from 'cc';
 const { ccclass, property } = _decorator;
 
 const enum GridType {
@@ -38,10 +38,11 @@ export class GameManager extends Component {
   levels: string[] = []
   players: Position[] = []
   pitRemains: number = -1
-  currentLevel: number = 1
+  currentLevel: number = 8
   moveQueue: Position[] = []
   gameStarted = false
   lockInput = false
+  zoomRate = 16
 
   start() {
     function assert(err) {
@@ -72,7 +73,7 @@ export class GameManager extends Component {
   step() {
     if (!this.moveQueue.length) {
       this.lockInput = false
-      this.unschedule(step)
+      this.unschedule(this.step)
       return
     }
     const { x, y } = this.moveQueue.shift()
@@ -146,6 +147,8 @@ export class GameManager extends Component {
 
   createNodeWithSpriteFrame(spriteFrame: SpriteFrame) {
     const node = new Node()
+    const transform = node.addComponent(UITransform)
+    transform.anchorX = transform.anchorY = 0
     const sprite = node.addComponent(Sprite)
     sprite.spriteFrame = spriteFrame
     return node
@@ -158,10 +161,12 @@ export class GameManager extends Component {
     ground.removeAllChildren()
     const leveltext = this.levels[this.currentLevel]
     if (!leveltext) throw `level ${this.currentLevel} not exisit`
-    const map = leveltext.split('\n').reverse()
-    // const height = map.length
-    // const width = Math.max(...map.map(line=>line.length))
-    // this.map = Array(width).map(()=>Array(height))
+    const map = leveltext.split('\n').reverse().map(v=>v.trimEnd())
+    const height = map.length
+    const width = Math.max(...map.map(line=>line.length))
+    this.zoomRate = Math.min(100 / height, 108 / width) / 16
+    level.setScale(this.zoomRate, this.zoomRate, 0)
+    ground.setScale(this.zoomRate, this.zoomRate, 0)
     this.pitRemains = 0
     this.players = []
     this.map = []
@@ -213,9 +218,9 @@ export class GameManager extends Component {
         if (this.mapChanges.get(grid) < effect) {
           this.mapChanges.set(grid, effect)
         }
-      } else {
-        this.mapChanges.set(grid, effect)
+        return
       }
+      this.mapChanges.set(grid, effect)
     }
     const tryMove = (target: Grid): boolean => {
       if (!target) return false
