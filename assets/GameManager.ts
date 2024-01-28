@@ -17,21 +17,28 @@ interface Grid {
   y: number
 }
 
-interface Player {
+interface Position {
   x: number
   y: number
+}
+
+const enum EffectType {
+  PlayerMoveFrom,
+  ChestMoveFrom,
+  PlayerMoveTo,
+  ChestMoveTo,
+  PitGone,
 }
 
 @ccclass('GameManager')
 export class GameManager extends Component {
   map: Grid[][] = []
-  mapChanges: { grid: Grid, type: GridType }[] = []
-  reverseChange: boolean = false
+  mapChanges: Map<Grid, EffectType> = new Map()
   spriteRecord: Record<number, SpriteFrame> = {}
   levels: string[] = []
-  players: Player[] = []
+  players: Position[] = []
   pitRemains: number = -1
-  currentLevel: number
+  currentLevel: number = 1
 
   start() {
     function assert(err) {
@@ -61,7 +68,6 @@ export class GameManager extends Component {
 
   onGameStart() {
     this.node.getChildByName('StartMenu').active = false
-    this.currentLevel = 1
     this.loadMap()
     input.on(Input.EventType.KEY_DOWN, (e) => {
       switch (e.keyCode) {
@@ -93,33 +99,32 @@ export class GameManager extends Component {
       grid.node.getComponent(Sprite).spriteFrame = this.spriteRecord[grid.type]
     }
     let v
-    if (this.reverseChange) {
-      this.mapChanges = this.mapChanges.reverse()
+    // if (this.reverseChange) {
+    //   this.mapChanges = this.mapChanges.reverse()
+    // }
+    // if (this.mapChanges.length) {
+    //   log(this.mapChanges.map((v) => `${v.grid.type} to ${v.type} at ${v.grid.x}, ${v.grid.y}`).join('\n'))
+    // }
+    function effect2grid(effect: EffectType) {
+      if (effect === EffectType.PlayerMoveFrom) return GridType.Ground
+      if (effect === EffectType.ChestMoveFrom) return GridType.Ground
+      if (effect === EffectType.PlayerMoveTo) return GridType.Player
+      if (effect === EffectType.ChestMoveTo) return GridType.Chest
+      if (effect === EffectType.PitGone) return GridType.Ground
     }
-    if (this.mapChanges.length) {
-      log(this.mapChanges.map((v)=>`${v.grid.type} to ${v.type} at ${v.grid.x}, ${v.grid.y}`).join('\n'))
-    }
-    while (this.mapChanges.length) {
-      v = this.mapChanges.pop()
-      if (v.grid.type === GridType.Pit) {
+    for (let [grid, effect] of this.mapChanges) {
+      log(`${grid.x}, ${grid.y}: ${effect}`)
+      if (effect === EffectType.PitGone) {
         this.pitRemains -= 1
       }
-      v.grid.type = v.type
-      refreshGrid(v.grid)
+      grid.type = effect2grid(effect)
+      refreshGrid(grid)
+      this.mapChanges.delete(grid)
+      if (!this.pitRemains) {
+        this.currentLevel += 1
+        return this.loadMap()
+      }
     }
-    if (!this.pitRemains) {
-      this.currentLevel += 1
-      return this.loadMap()
-    }
-  }
-
-  symbol2type(symbol: string) {
-    if (symbol == '.') return GridType.Ground
-    if (symbol == '@') return GridType.Player
-    if (symbol == '#') return GridType.Wall
-    if (symbol == '&') return GridType.Chest
-    if (symbol == '^') return GridType.Pit
-    return GridType.Empty
   }
 
   createNodeWithSpriteFrame(spriteFrame: SpriteFrame) {
@@ -143,10 +148,18 @@ export class GameManager extends Component {
     this.pitRemains = 0
     this.players = []
     this.map = []
+    function symbol2type(symbol: string) {
+      if (symbol == '.') return GridType.Ground
+      if (symbol == '@') return GridType.Player
+      if (symbol == '#') return GridType.Wall
+      if (symbol == '&') return GridType.Chest
+      if (symbol == '^') return GridType.Pit
+      return GridType.Empty
+    }
     for (let y = 0; y < map.length; ++y) {
       this.map[y] = []
       for (let x = 0; x < map[y].length; ++x) {
-        const type = this.symbol2type(map[y][x])
+        const type = symbol2type(map[y][x])
         if (type === GridType.Empty) continue
         if (type === GridType.Player) {
           this.players.push({ x: x, y: y })
@@ -187,8 +200,16 @@ export class GameManager extends Component {
     // log(`${mov_x}, ${mov_y}`)
     // log(mov_x || mov_y)
     // log((mov_x || mov_y) === 1)
-    const setGrid = (grid: Grid, type: GridType) => {
-      this.mapChanges.push({ grid: grid, type: type })
+    const setGrid = (grid: Grid, effect: EffectType) => {
+      if (this.mapChanges.has(grid)) {
+        log(`${grid.x}, ${grid.y}: ${this.mapChanges.get(grid)} + ${effect}`)
+        if (this.mapChanges.get(grid) < effect) {
+          this.mapChanges.set(grid, effect)
+        } else {
+        }
+      } else {
+        this.mapChanges.set(grid, effect)
+      }
     }
     const tryMove = (target: Grid): boolean => {
       if (!target) return false
@@ -207,15 +228,19 @@ export class GameManager extends Component {
           if (further.type === GridType.Wall)
             return false
           if (further.type === GridType.Ground) {
-            setGrid(further, GridType.Chest)
+            setGrid(further, EffectType.ChestMoveTo)
             return true
           }
           if (further.type === GridType.Pit) {
-            setGrid(further, GridType.Ground)
+            setGrid(further, EffectType.PitGone)
             return true
           }
           if (further.type === GridType.Player) {
-            return tryMove(further)
+            if (tryMove(further)) {
+              setGrid(further, EffectType.ChestMoveTo)
+              return true
+            }
+            return false
           }
           if (further.type === GridType.Chest)
             return false
@@ -230,8 +255,8 @@ export class GameManager extends Component {
       const target = this.map[player.y + mov_y][player.x + mov_x]
       if (!target) return
       if (tryMove(target)) {
-        setGrid(current, GridType.Ground)
-        setGrid(target, GridType.Player)
+        setGrid(current, EffectType.PlayerMoveFrom)
+        setGrid(target, EffectType.PlayerMoveTo)
         player.x += mov_x
         player.y += mov_y
       }
