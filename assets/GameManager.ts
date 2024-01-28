@@ -1,4 +1,4 @@
-import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, PostProcessStage, floatToHalf, UITransform } from 'cc';
+import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, PostProcessStage, floatToHalf, UITransform, director, Label } from 'cc';
 const { ccclass, property } = _decorator;
 
 const enum GridType {
@@ -32,16 +32,23 @@ const enum EffectType {
 
 @ccclass('GameManager')
 export class GameManager extends Component {
-  map: Grid[][] = []
-  mapChanges: Map<Grid, EffectType> = new Map()
   spriteRecord: Record<number, SpriteFrame> = {}
+
   levels: string[] = []
-  players: Position[] = []
+  currentLevel: number = 1
+  lastLevel = 12
+
+  map: Grid[][] = []
   pitRemains: number = -1
-  currentLevel: number = 8
+  players: Position[] = []
+  mapChanges: Map<Grid, EffectType> = new Map()
   moveQueue: Position[] = []
+  inputBox: Node
+
   gameStarted = false
+  gameEnd = false
   lockInput = false
+
   zoomRate = 16
 
   start() {
@@ -86,24 +93,30 @@ export class GameManager extends Component {
     this.node.getChildByPath('StartMenu').active = false
     this.loadMap()
     const enterQueue = (x, y) => {
+      if (this.lockInput) return
       this.moveQueue.push({ x: x, y: y })
     }
+    const label = this.node.getChildByName('Input').getComponent(Label)
     input.on(Input.EventType.KEY_DOWN, (e) => {
       switch (e.keyCode) {
         case KeyCode.ARROW_UP:
         case KeyCode.KEY_W:
+          label.string += '上'
           enterQueue(0, 1)
           break
         case KeyCode.ARROW_DOWN:
         case KeyCode.KEY_S:
+          label.string += '下'
           enterQueue(0, -1)
           break
         case KeyCode.ARROW_LEFT:
         case KeyCode.KEY_A:
+          label.string += '左'
           enterQueue(-1, 0)
           break
         case KeyCode.ARROW_RIGHT:
         case KeyCode.KEY_D:
+          label.string += '右'
           enterQueue(1, 0)
           break
         case KeyCode.KEY_R:
@@ -112,7 +125,12 @@ export class GameManager extends Component {
         case KeyCode.ENTER:
         case KeyCode.SPACE:
           this.lockInput = true
+          label.string = ''
           this.schedule(this.step, 0.2)
+          break
+        case KeyCode.BACKSPACE:
+          label.string = label.string.slice(0, -1)
+          this.moveQueue.pop()
           break
       }
     })
@@ -155,6 +173,11 @@ export class GameManager extends Component {
   }
 
   loadMap() {
+    if (this.gameEnd) return
+    if (this.currentLevel > this.lastLevel) {
+      director.loadScene('Ending')
+      this.gameEnd = true
+    }
     const level = this.node.getChildByPath('window/Level')
     const ground = this.node.getChildByPath('window/Ground')
     level.removeAllChildren()
