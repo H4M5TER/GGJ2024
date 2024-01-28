@@ -37,12 +37,14 @@ export class GameManager extends Component {
   levels: string[] = []
   currentLevel: number = 1
   lastLevel = 12
+  levelSuccess = false
 
   map: Grid[][] = []
   pitRemains: number = -1
   players: Position[] = []
   mapChanges: Map<Grid, EffectType> = new Map()
   moveQueue: Position[] = []
+
   inputLabel: Label
 
   gameStarted = false
@@ -81,7 +83,7 @@ export class GameManager extends Component {
     if (!this.moveQueue.length) {
       this.lockInput = false
       this.unschedule(this.step)
-      return
+      return this.turnEnd()
     }
     const { x, y } = this.moveQueue.shift()
     this.handleMove(x, y)
@@ -93,6 +95,18 @@ export class GameManager extends Component {
     audio.playOneShot(audio.clip)
   }
 
+  turnEnd() {
+    if (this.levelSuccess) {
+      this.levelSuccess = false
+      this.currentLevel += 1
+      director.emit('success')
+      this.loadMap()
+    } else {
+      director.emit('failure')
+      this.loadMap()
+    }
+  }
+
   resolveQueue() {
     this.lockInput = true
     this.inputLabel.string = ''
@@ -102,6 +116,7 @@ export class GameManager extends Component {
   onGameStart() {
     if (this.gameStarted) return
     this.gameStarted = true
+    director.emit('danmaku-start')
     this.node.getChildByPath('StartMenu').active = false
     this.loadMap()
     const enterQueue = (x, y) => {
@@ -168,8 +183,8 @@ export class GameManager extends Component {
       refreshGrid(grid)
       this.mapChanges.delete(grid)
       if (!this.pitRemains) {
-        this.currentLevel += 1
-        return this.loadMap()
+        this.levelSuccess = true
+        return
       }
     }
   }
