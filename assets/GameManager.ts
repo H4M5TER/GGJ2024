@@ -1,4 +1,5 @@
 import { _decorator, Component, Input, input, instantiate, log, Node, Prefab, resources, Sprite, SpriteFrame, TextAsset, KeyCode, UITransform, director, Label, AudioSource } from 'cc';
+import { GameLanguage } from './GameLanguage';
 const { ccclass, property } = _decorator;
 
 const enum GridType {
@@ -35,7 +36,7 @@ export class GameManager extends Component {
   spriteRecord: Record<number, SpriteFrame> = {}
 
   // levels: string[] = []
-  levels = [,"####\r\n#.@.##\r\n#.&.^#\r\n######"," ####\r\n#.@.#\r\n#^#&.#\r\n#....#\r\n#..##\r\n ##","########\r\n#...#...#\r\n#.&@^.&.#\r\n#..^####\r\n ###","#######\r\n#.@#@^#\r\n#.&#.&#\r\n#.^#..#\r\n#######","########\r\n#..^...#\r\n#^@#@&.#\r\n#&.....#\r\n#..#####\r\n ##","  ###\r\n #@..#\r\n  #..#\r\n  #&.#\r\n ##@##\r\n#^&^@#\r\n ####"," ####\r\n#....#\r\n#@##.#\r\n #@.&.#\r\n #..^#\r\n  ###","   ###\r\n  #^^^#\r\n ##&&&##\r\n#^&@@@&^#\r\n#^&@#@&^#\r\n#^&@@@&^#\r\n ##&&&##\r\n  #^^^#\r\n   ###","#####\r\n#...#\r\n#^..#\r\n#@..#\r\n#.###\r\n#&&.#\r\n#^..#\r\n#@..#\r\n#####","#######\r\n#^@^@##\r\n###.&.#\r\n###&..#\r\n###...#\r\n#######"," #######\r\n#@@@@...#\r\n#....&&.#\r\n#..^^..#\r\n#&&&&##\r\n#^^^^#\r\n ####"," #####\r\n#@^&^@#\r\n #...#\r\n #&@&#\r\n #...#\r\n#@^&^@#\r\n #####"]
+  levels = [, "####\r\n#.@.##\r\n#.&.^#\r\n######", " ####\r\n#.@.#\r\n#^#&.#\r\n#....#\r\n#..##\r\n ##", "########\r\n#...#...#\r\n#.&@^.&.#\r\n#..^####\r\n ###", "#######\r\n#.@#@^#\r\n#.&#.&#\r\n#.^#..#\r\n#######", "########\r\n#..^...#\r\n#^@#@&.#\r\n#&.....#\r\n#..#####\r\n ##", "  ###\r\n #@..#\r\n  #..#\r\n  #&.#\r\n ##@##\r\n#^&^@#\r\n ####", " ####\r\n#....#\r\n#@##.#\r\n #@.&.#\r\n #..^#\r\n  ###", "   ###\r\n  #^^^#\r\n ##&&&##\r\n#^&@@@&^#\r\n#^&@#@&^#\r\n#^&@@@&^#\r\n ##&&&##\r\n  #^^^#\r\n   ###", "#####\r\n#...#\r\n#^..#\r\n#@..#\r\n#.###\r\n#&&.#\r\n#^..#\r\n#@..#\r\n#####", "#######\r\n#^@^@##\r\n###.&.#\r\n###&..#\r\n###...#\r\n#######", " #######\r\n#@@@@...#\r\n#....&&.#\r\n#..^^..#\r\n#&&&&##\r\n#^^^^#\r\n ####", " #####\r\n#@^&^@#\r\n #...#\r\n #&@&#\r\n #...#\r\n#@^&^@#\r\n #####"]
   currentLevel: number = 1
   lastLevel = 12
   levelSuccess = false
@@ -112,7 +113,7 @@ export class GameManager extends Component {
     if (!this.moveQueue.length) return
     this.lockInput = true
     this.inputLabel.string = ''
-    this.schedule(this.step, 0.3) 
+    this.schedule(this.step, 0.3)
   }
 
   onGameStart() {
@@ -124,6 +125,8 @@ export class GameManager extends Component {
     this.node.getChildByPath('StartMenu').active = false
     this.loadMap()
     const enterQueue = (x, y) => {
+      // Clear the randomTimer of the player
+      director.emit("timerClear")
       if (this.lockInput) return
       this.moveQueue.push({ x: x, y: y })
     }
@@ -132,22 +135,22 @@ export class GameManager extends Component {
       switch (e.keyCode) {
         case KeyCode.ARROW_UP:
         case KeyCode.KEY_W:
-          label.string += '上'
+          label.string += GameLanguage.Instance.language == "en" ? "U" : '上'
           enterQueue(0, 1)
           break
         case KeyCode.ARROW_DOWN:
         case KeyCode.KEY_S:
-          label.string += '下'
+          label.string += GameLanguage.Instance.language == "en" ? "D" : '下'
           enterQueue(0, -1)
           break
         case KeyCode.ARROW_LEFT:
         case KeyCode.KEY_A:
-          label.string += '左'
+          label.string += GameLanguage.Instance.language == "en" ? "L" : '左'
           enterQueue(-1, 0)
           break
         case KeyCode.ARROW_RIGHT:
         case KeyCode.KEY_D:
-          label.string += '右'
+          label.string += GameLanguage.Instance.language == "en" ? "R" : '右'
           enterQueue(1, 0)
           break
         case KeyCode.KEY_R:

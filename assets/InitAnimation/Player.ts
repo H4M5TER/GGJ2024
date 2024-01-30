@@ -1,5 +1,6 @@
 import { _decorator, AudioSource, Component, director, Game, Label, lerp, log, math, Node, random, Sprite, Vec2, Vec3 } from 'cc';
 import { GameManager } from '../GameManager';
+import { GameLanguage } from '../GameLanguage';
 const { ccclass, property } = _decorator;
 
 @ccclass('Player')
@@ -29,13 +30,16 @@ export class Player extends Component {
     private printText: string;
 
     start() {
-        director.on('success', ()=>{
+        director.on('success', () => {
             this.state = 'success'
             this.randomTimer = 1000
         })
-        director.on('failure', ()=>{
+        director.on('failure', () => {
             this.state = 'failed'
             this.randomTimer = 1000
+        })
+        director.on("timerClear", () => {
+            this.randomTimer = 0;
         })
 
         this.gameManager = this.node.getParent().getComponent(GameManager);
@@ -53,15 +57,31 @@ export class Player extends Component {
 
         this.isSpeaking = true;
 
-        this.introTexts[0] = "大家好啊我是西芹菜";
-        this.introTexts[1] = "今天来给大家看点想看的东西";
+        let lan = GameLanguage.Instance.language;
 
-        this.puzzleSolvingTexts = ['有点难', '或许应该这样？', '唔', '然后应该这样？', '这个箱子这样推', '然后这样走',
-            '主播喝口水先', '...', '好像有思路了'];
+        this.introTexts[0] = lan == "en" ? "Hello everyone I'm Westcelery" : "大家好啊我是西芹菜";
+        this.introTexts[1] = lan == "en" ? "Today I'll show you something you want" : "今天来给大家看点想看的东西";
 
-        this.playerFailedTexts = ['这样好像不行', '好好思考一下吧', '或许还差一点', '好像有戏'];
+        this.puzzleSolvingTexts = [lan == "en" ? "A bit hard" : '有点难',
+        lan == "en" ? "Maybe should this?" : '或许应该这样？',
+        lan == "en" ? "Emm" : '唔',
+        lan == "en" ? "And like this?" : '然后应该这样？',
+        lan == "en" ? "This chest go here" : '这个箱子这样推',
+        lan == "en" ? "And go there" : '然后这样走',
+        lan == "en" ? "Westcelery drinks some water" : '主播喝口水先',
+            '...',
+        lan == "en" ? "Maybe I know how to do" : '好像有思路了'];
 
-        this.playerSuccessTexts = ['不愧是游戏领域大神', '厉害', '好强', '我也要努力了', '下次不会输给你了'];
+        this.playerFailedTexts = [lan == "en" ? "That's wrong" : '这样好像不行',
+        lan == "en" ? "Let's have a deep thought" : '好好思考一下吧',
+        lan == "en" ? "Maybe close" : '或许还差一点',
+        lan == "en" ? "Looks like have a chance" : '好像有戏'];
+
+        this.playerSuccessTexts = [lan == "en" ? "You are a game domain god" : '不愧是游戏领域大神',
+        lan == "en" ? "Nice" : '厉害',
+        lan == "en" ? "Awesome" : '好强',
+        lan == "en" ? "I need to try harder" : '我也要努力了',
+        lan == "en" ? "Won't beated by you next time" : '下次不会输给你了'];
 
         this.introIndex = 0;
     }
@@ -119,7 +139,7 @@ export class Player extends Component {
                     this.wordNumber++;
                     this.someoneSpeak.play();
                 }
-                if (this.startTimer > this.printText.length*2 + 10) {
+                if (this.startTimer > this.printText.length * 2 + 10) {
                     this.startTimer = 0;
                     this.wordNumber = 0;
                     this.isSpeaking = false;
