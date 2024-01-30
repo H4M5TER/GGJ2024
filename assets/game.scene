@@ -199,7 +199,7 @@
     "_priority": 0,
     "_fov": 45,
     "_fovAxis": 0,
-    "_orthoHeight": 90,
+    "_orthoHeight": 110.70496083550914,
     "_near": 0,
     "_far": 1000,
     "_color": {
@@ -433,7 +433,7 @@
     "_string": "",
     "_horizontalAlign": 0,
     "_verticalAlign": 0,
-    "_actualFontSize": 23.6,
+    "_actualFontSize": 23.9375,
     "_fontSize": 8,
     "_fontFamily": "Arial",
     "_lineHeight": 8,
@@ -1029,7 +1029,7 @@
     "_string": "label",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 29.5,
+    "_actualFontSize": 29.921875,
     "_fontSize": 10,
     "_fontFamily": "Arial",
     "_lineHeight": 12,
@@ -1461,7 +1461,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 31.999987586069913,
+      "width": 31.996654699738905,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -1494,7 +1494,7 @@
     "_string": "Play",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 47.2,
+    "_actualFontSize": 47.875,
     "_fontSize": 16,
     "_fontFamily": "Chill Bitmap 7px",
     "_lineHeight": 40,
@@ -1735,7 +1735,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 175.10154594809322,
+      "width": 175.0954634464752,
       "height": 50.4
     },
     "_anchorPoint": {
@@ -1768,7 +1768,7 @@
     "_string": "Danmaku Sokoban",
     "_horizontalAlign": 1,
     "_verticalAlign": 1,
-    "_actualFontSize": 70.80000000000001,
+    "_actualFontSize": 71.8125,
     "_fontSize": 24,
     "_fontFamily": "Guanzhi 8px",
     "_lineHeight": 40,
